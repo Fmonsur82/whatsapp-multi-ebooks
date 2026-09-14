@@ -1,0 +1,14 @@
+{"object":"whatsapp_business_account","entry":[{"id":"WABA_ID_AQUI","changes":[{"value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"573150938157","phone_number_id":"706639455864533"},"contacts":[{"profile":{"name":"Francisco Monsalve"},"wa_id":"573174300508"}],"messages":[{"from":"573174300508","id":"wamid.TEST123","timestamp":"1710000000","type":"text","text":{"body":"hola "}}]},"field":"messages"}]}]}
+
+{"object":"whatsapp_business_account","entry":[{"id":"WABA_ID_AQUI","changes":[{"value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"573150938157","phone_number_id":"706639455864533"},"contacts":[{"profile":{"name":"Francisco Monsalve"},"wa_id":"573174300508"}],"messages":[{"from":"573174300508","id":"wamid.TEST123","timestamp":"1710000000","type":"text","text":{"body":"hola "}}]},"field":"messages"}]}]}
+
+{"object":"whatsapp_business_account","entry":[{"id":"WABA_ID_AQUI","changes":[{"value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"573150938157","phone_number_id":"706639455864533"},"contacts":[{"profile":{"name":"Francisco Monsalve"},"wa_id":"573174300508"}],"messages":[{"from":"573174300508","id":"wamid.TEST123","timestamp":"1710000000","type":"text","text":{"body":"química"}}]},"field":"messages"}]}]}
+
+{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"statuses":[{"id":"wamid.test","status":"delivered","recipient_id":"573000000000"}]}}]}]}
+
+"WA STATUS id=wamid.test status=delivered errors=[]"
+
+{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"statuses":[{"id":"wamid.test","status":"delivered","recipient_id":"573000000000"}]}}]}]}
+
+"WA STATUS id=wamid.test status=delivered errors=[]"
+
