@@ -8,6 +8,104 @@ class Webhook{
         $this->apikey = OPENAI_API_KEY;
     }
 
+    public function obtenerHeadersSolicitud() {
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        if (!is_array($headers)) {
+            $headers = [];
+        }
+
+        foreach ($_SERVER as $nombre => $valor) {
+            if (strpos($nombre, 'HTTP_') === 0) {
+                $clave = strtolower(str_replace('_', '-', substr($nombre, 5)));
+                if (!array_key_exists($clave, array_change_key_case($headers, CASE_LOWER))) {
+                    $headers[$clave] = $valor;
+                }
+            }
+        }
+
+        return $this->enmascararHeaders($headers);
+    }
+
+    private function enmascararHeaders(array $headers) {
+        $sensibles = [
+            'authorization',
+            'cookie',
+            'set-cookie',
+            'x-hub-signature-256'
+        ];
+        $resultado = [];
+
+        foreach ($headers as $nombre => $valor) {
+            $clave = strtolower((string) $nombre);
+            $resultado[$nombre] = in_array($clave, $sensibles, true)
+                ? '[REDACTADO]'
+                : $valor;
+        }
+
+        return $resultado;
+    }
+
+    public function validarFirma(string $payload, ?string $firma) {
+        if (META_APP_SECRET === '' || !is_string($firma) || !preg_match('/^sha256=([a-f0-9]{64})$/i', $firma, $coincidencias)) {
+            return false;
+        }
+
+        $esperada = hash_hmac('sha256', $payload, META_APP_SECRET);
+        return hash_equals(strtolower($esperada), strtolower($coincidencias[1]));
+    }
+
+    public function registrarWebhookLog(array $datos) {
+        try {
+            $conexion = Conexion::getConexion();
+            $sql = 'INSERT INTO agentes_whatsapp_webhook_logs
+                (meta_waba_id, meta_phone_number_id, tipo_evento, firma_valida,
+                 resultado, http_status_respuesta, error_codigo, error_mensaje,
+                 payload, headers, creado_en)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            $stmt = $conexion->prepare($sql);
+            if (!$stmt) {
+                return false;
+            }
+
+            $payload = array_key_exists('payload', $datos) && $datos['payload'] !== null
+                ? json_encode($datos['payload'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                : null;
+            $headers = array_key_exists('headers', $datos) && $datos['headers'] !== null
+                ? json_encode($datos['headers'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                : null;
+            $creadoEn = $datos['creado_en'] ?? date('Y-m-d H:i:s');
+            $metaWabaId = $datos['meta_waba_id'] ?? null;
+            $metaPhoneNumberId = $datos['meta_phone_number_id'] ?? null;
+            $tipoEvento = $datos['tipo_evento'] ?? null;
+            $firmaValida = (int) ($datos['firma_valida'] ?? 0);
+            $httpStatus = (int) ($datos['http_status_respuesta'] ?? 500);
+            $resultado = $datos['resultado'] ?? 'error_interno';
+            $errorCodigo = $datos['error_codigo'] ?? null;
+            $errorMensaje = $datos['error_mensaje'] ?? null;
+
+            $stmt->bind_param(
+                'sssisisssss',
+                $metaWabaId,
+                $metaPhoneNumberId,
+                $tipoEvento,
+                $firmaValida,
+                $resultado,
+                $httpStatus,
+                $errorCodigo,
+                $errorMensaje,
+                $payload,
+                $headers,
+                $creadoEn
+            );
+            $ok = $stmt->execute();
+            $stmt->close();
+            return $ok;
+        } catch (Throwable $e) {
+            error_log('No se pudo persistir el log del webhook: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function logEnRaw($entrada) {
         $dir = __DIR__ . '/../logs';
         if (!is_dir($dir)) {

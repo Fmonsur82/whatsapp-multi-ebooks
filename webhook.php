@@ -21,9 +21,56 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 	exit();	
 }
 $input = file_get_contents('php://input');
+$headersSolicitud = $mdl_webhook->obtenerHeadersSolicitud();
+$firmaRecibida = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? null;
+$firmaValida = $mdl_webhook->validarFirma($input, $firmaRecibida);
+$entrada = null;
+$resultadoLog = $firmaValida ? 'aceptado' : 'firma_invalida';
+$httpStatusLog = $firmaValida ? 200 : 401;
+$errorCodigoLog = $firmaValida ? null : 'firma_invalida';
+$errorMensajeLog = $firmaValida ? null : 'Firma X-Hub-Signature-256 ausente, no configurada o invalida';
+
+register_shutdown_function(function () use (&$entrada, &$resultadoLog, &$httpStatusLog, &$errorCodigoLog, &$errorMensajeLog, $firmaValida, $headersSolicitud, $input, $mdl_webhook) {
+    $fatal = error_get_last();
+    if ($fatal && in_array($fatal['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        $resultadoLog = 'error_interno';
+        $httpStatusLog = 500;
+        $errorCodigoLog = 'error_fatal';
+        $errorMensajeLog = substr($fatal['message'], 0, 500);
+    }
+
+    $valor = is_array($entrada) ? ($entrada['entry'][0]['changes'][0]['value'] ?? []) : [];
+    $metadata = is_array($valor['metadata'] ?? null) ? $valor['metadata'] : [];
+    $entry = is_array($entrada['entry'][0] ?? null) ? $entrada['entry'][0] : [];
+    $tipoEvento = isset($valor['messages']) ? 'messages' : (isset($valor['statuses']) ? 'statuses' : ($entrada['object'] ?? null));
+
+    $mdl_webhook->registrarWebhookLog([
+        'meta_waba_id' => $entry['id'] ?? ($metadata['waba_id'] ?? null),
+        'meta_phone_number_id' => $metadata['phone_number_id'] ?? null,
+        'tipo_evento' => is_string($tipoEvento) ? substr($tipoEvento, 0, 80) : null,
+        'firma_valida' => $firmaValida,
+        'resultado' => $resultadoLog,
+        'http_status_respuesta' => http_response_code() ?: $httpStatusLog,
+        'error_codigo' => $errorCodigoLog,
+        'error_mensaje' => $errorMensajeLog,
+        'payload' => $firmaValida ? $entrada : null,
+        'headers' => $headersSolicitud
+    ]);
+});
+
+if (!$firmaValida) {
+    http_response_code(401);
+    echo json_encode(['status' => 'ERROR', 'msj' => 'Firma invalida']);
+    exit();
+}
+
 $entrada = json_decode($input,true);
 
 if (!is_array($entrada)) {
+	$resultadoLog = 'payload_invalido';
+	$httpStatusLog = 400;
+	$errorCodigoLog = 'json_invalido';
+	$errorMensajeLog = json_last_error_msg();
 	http_response_code(400);
 	echo json_encode(['status' => 'ERROR', 'msj' => 'JSON inválido']);
 	exit();
@@ -38,6 +85,7 @@ $valorWhatsapp = $entrada['entry'][0]['changes'][0]['value'] ?? [];
 // No son mensajes de usuario: procesarlos como tales abría una conexión MySQL
 // inútil por cada estado y agotaba la cuota horaria del hosting.
 if (!empty($valorWhatsapp['statuses']) && empty($valorWhatsapp['messages'])) {
+	$resultadoLog = 'ignorado';
 	foreach ($valorWhatsapp['statuses'] as $st) {
 		$id = $st['id'] ?? '';
 		$status = $st['status'] ?? '';
@@ -124,6 +172,7 @@ if (($entrada['object'] ?? '') === 'bienvenida') {
 }
 
 if (!$data_entrada) {
+	$resultadoLog = 'ignorado';
 	http_response_code(200);
 	echo json_encode(['status' => 'OK']);
 	exit();
@@ -134,6 +183,7 @@ $bsuid = $data_entrada['bsuid'] ?? null;
 $destino = $data_entrada['destino'] ?? null;
 
 if (!$destino) {
+	$resultadoLog = 'ignorado';
     http_response_code(200);
     echo json_encode(['status' => 'OK']);
     exit();
