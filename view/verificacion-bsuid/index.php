@@ -13,10 +13,11 @@ if ($token === '' || !preg_match('/^[a-f0-9]{64}$/', $token)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verifica tu cuenta</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
     <link rel="stylesheet" href="../../public/css/main.css">
 </head>
 <body>
-    <div class="loader"></div>
+    <div class="loader" style="display: none;"></div>
     <main class="container mt-4 mb-5">
         <div class="row justify-content-center mt-3">
             <div class="col-lg-4 col-md-6 col-8 text-center">
@@ -30,9 +31,16 @@ if ($token === '' || !preg_match('/^[a-f0-9]{64}$/', $token)) {
                 <form id="frm_verificacion_bsuid">
                     <input type="hidden" name="token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="form-group">
-                        <label for="telefono">Número registrado</label>
-                        <input type="text" class="form-control" id="telefono" name="telefono" inputmode="numeric" pattern="\d{8,15}" maxlength="15" required placeholder="Ejemplo: 573505468149">
-                        <small class="form-text text-muted">Incluye el indicativo del país, sin signos ni espacios.</small>
+                        <label for="indicativo">Número registrado</label>
+                        <div class="form-row">
+                            <div class="col-md-5 mb-2">
+                                <select id="indicativo" name="indicativo" class="selectpicker" title="País" data-live-search="true" data-width="100%" data-size="5" required></select>
+                            </div>
+                            <div class="col-md-7 mb-2">
+                                <input type="text" class="form-control" id="telefono" name="telefono" inputmode="numeric" pattern="\d{6,13}" maxlength="13" required placeholder="Número celular">
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Selecciona tu país e ingresa el número celular registrado.</small>
                     </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" value="1" id="acepta_pol_priv" name="acepta_pol_priv" required>
@@ -48,6 +56,9 @@ if ($token === '' || !preg_match('/^[a-f0-9]{64}$/', $token)) {
             </div>
         </div>
     </main>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
     <script src="../../public/js/verificacion-bsuid.js"></script>
 </body>
 </html>
