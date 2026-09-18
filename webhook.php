@@ -229,40 +229,44 @@ if ($data_entrada['tipo'] == 'audio') {
     return;
 }
 
-//.  BUSQUEDA
-$json_consultarLibros = $mdl_webhook->consultarLibros($data_entrada['telefono'], $data_entrada['texto'], $usuario['id_cliente']);        
+//.  CLASIFICACION Y BUSQUEDA
 $clasificarMensaje = $mdl_webhook->clasificarMensaje($data_entrada['texto']);
 
 $mdl_webhook->nuevoMensajeConversacion($usuario['id_usuario'],'user',$data_entrada['texto'],$fecha_hora);
 
 switch ($clasificarMensaje['codigo']) {
-    case '1':
+    case 1:
         $mensaje = '¡Hola! 😊 Escríbeme el título, autor o tema que buscas. Idealmente en una frase corta para encontrar mejores resultados 📚';
         $respuesta = $mdl_webhook->plantillaTexto($destino,$mensaje );
         $mdl_webhook->enviador($respuesta);
-        exit();
         break;
-    case '2':
+    case 2:
         $mensaje = 'Lamentamos que te vayas 😔. Si deseas retirarte del servicio de WhatsApp, por favor realiza el proceso a través de este enlace: https://wsp-multi.dcsing.com/view/eliminar-cuenta/';
         $respuesta = $mdl_webhook->plantillaTexto($destino,$mensaje );
         $mdl_webhook->enviador($respuesta);
-        exit();    
         break;
-    case '3':
+    case 3:
         $mensaje = '¡Claro! 📄 Puedes consultar nuestros Términos y Condiciones en el siguiente enlace: https://wsp-multi.dcsing.com/view/terminos-y-condiciones/';
         $respuesta = $mdl_webhook->plantillaTexto($destino,$mensaje );
         $mdl_webhook->enviador($respuesta);
-        exit();
         break;
-    case '4':
-        $consultarLibros = json_decode($json_consultarLibros);
-        $mensaje='';
+    case 4:
+        $json_consultarLibros = $mdl_webhook->consultarLibros($data_entrada['telefono'], $data_entrada['texto'], $usuario['id_cliente']);
         $mdl_webhook->logEnRaw($json_consultarLibros);
+        $consultarLibros = json_decode((string) $json_consultarLibros, true);
+        if (!is_array($consultarLibros)) {
+            $consultarLibros = [];
+        }
+
+        $mensajesSistema = [];
         if (count($consultarLibros) > 0) {
 
             foreach ($consultarLibros as $key => $value) {       
-                $id_libro = $value->idlibro;
-                $enlace = $usuario['url_acceso'].'?il='.$value->idlibro;
+                $id_libro = $value['idlibro'] ?? null;
+                if (!$id_libro) {
+                    continue;
+                }
+                $enlace = $usuario['url_acceso'].'?il='.$id_libro;
                 $url_portada = 'https://ebooks7-24.com/portadas/'.$id_libro.'.jpg';
                 $respuesta = $mdl_webhook->plantillaPortada($destino,$url_portada,$enlace);
                 $envio = $mdl_webhook->enviador($respuesta);
@@ -270,12 +274,15 @@ switch ($clasificarMensaje['codigo']) {
             }    
         }else{
             $mensaje = 'Lo siento, parece que no hay contenidos relacionados a este termino. ¡Quieres buscar algo más!';
+            $mensajesSistema[] = $mensaje;
             $respuesta = $mdl_webhook->plantillaTexto($destino,$mensaje );
             $mdl_webhook->enviador($respuesta);
         }
         $busquedaGeneral = $mdl_webhook->busquedaGeneral($usuario['url_acceso'], $data_entrada['texto']);
         $respuesta = $mdl_webhook->plantillaTexto($destino,$busquedaGeneral);
         $mdl_webhook->enviador($respuesta);
+        $mensajesSistema[] = $busquedaGeneral;
+        $mensaje = implode("\n", $mensajesSistema);
         break;
 
 }

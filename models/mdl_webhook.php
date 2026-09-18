@@ -328,8 +328,18 @@ class Webhook{
         $url = "https://csdcapi.azurewebsites.net/librosearch/?opensearch=".$encoded_search_term."&page=1&limit=3&sort=rating&portada=0&sindice=0&idcliente=".$idclientemeta;
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         $data_obj = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
+
+        if ($data_obj === false || $httpCode < 200 || $httpCode >= 300) {
+            error_log('No fue posible consultar libros. HTTP ' . ($httpCode ?: 'sin respuesta') . ($curlError !== '' ? ': ' . $curlError : ''));
+            return null;
+        }
+
         return $data_obj;
     }
 
