@@ -25,6 +25,10 @@ $fecha_hora = date('Y-m-d G:i:s');
 $id_cliente  = isset($_POST['id_cliente'])? sanitizar($_POST['id_cliente']) : "" ;
 $indicativo  = isset($_POST['indicativo'])? limpiarCadena($_POST['indicativo']) : "" ;
 $telefono  = isset($_POST['telefono'])? limpiarCadena($_POST['telefono']) : "" ;
+$aceptaPolPriv = ($_POST['acepta_pol_priv'] ?? '') === '1';
+$aceptaTyc = ($_POST['acepta_tyc'] ?? '') === '1';
+$dispositivo = substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? 'No informado'), 0, 500);
+$ip = filter_var($_SERVER['REMOTE_ADDR'] ?? '', FILTER_VALIDATE_IP) ?: '';
 
 switch ($_GET['op']) {
 	case 'obtenerData':
@@ -40,6 +44,14 @@ switch ($_GET['op']) {
 		echo json_encode($data);
 		break;
 	case 'nuevoNumero':
+		if (!$aceptaPolPriv || !$aceptaTyc) {
+			echo json_encode([
+				"icon"=>'warning',
+				"title"=>'Aceptación requerida',
+				"text"=>'Debes aceptar la política de tratamiento de datos y los términos y condiciones.',
+			]);
+			exit();
+		}
 		$validarUsuario = $mdl_Registro->obtenerUsuario($indicativo.$telefono);
 		if ($validarUsuario) {
 			$mensaje_respuesta = array(
@@ -50,7 +62,7 @@ switch ($_GET['op']) {
 			echo json_encode($mensaje_respuesta);
 			exit();
 		}
-		$respuesta = $mdl_Registro->nuevoNumero($indicativo.$telefono, $id_cliente);
+		$respuesta = $mdl_Registro->nuevoNumero($indicativo.$telefono, $id_cliente, $dispositivo, $ip);
 		if ($respuesta) {
 			
 			$mdl_Registro->mensajeBienvenida($indicativo.$telefono);

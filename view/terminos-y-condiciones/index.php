@@ -122,7 +122,7 @@
 
 
 					<h2><li>Eliminación de Número Telefónico</li></h2>
-					<p>El usuario podrá solicitar en cualquier momento la eliminación de su número de teléfono de la base de datos de la aplicación. La solicitud deberá realizarse a través de un mensaje al canal de soporte o al correo soporte@digitalcontent.com.co.</p>
+					<p>El usuario podrá solicitar en cualquier momento la eliminación de su número de teléfono de la base de datos de la aplicación. La solicitud deberá realizarse a través del siguiente formulario: <a href="../eliminar-cuenta/" target="_blank">Formulario de Eliminación de Cuenta</a></p>
 					<p>La eliminación del número:</p>
 					<ul>
 						<li>Será procesada en un plazo máximo de cinco (5) días hábiles desde su confirmación.</li>

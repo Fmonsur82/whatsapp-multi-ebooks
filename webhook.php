@@ -189,7 +189,7 @@ if (!$destino) {
     exit();
 }
 
-$usuario = $mdl_webhook->validarUsuario($telefono);
+$usuario = $mdl_webhook->validarUsuario($telefono, $bsuid);
 
 if (!$usuario) {
     $identificador = $telefono ?: $bsuid;
@@ -197,7 +197,14 @@ if (!$usuario) {
         $mdl_webhook->usrNoRegistrados($identificador, $fecha_hora);
         $mdl_webhook->LogWebhook($identificador,'Inserción de usuario no registrado');
     }
-    $mensaje = 'Parece que tu número no está registrado. Busca tu institución aquí: https://wsp-multi.dcsing.com/view/instituciones/';
+    if (!$telefono && $bsuid) {
+        $enlaceVerificacion = $mdl_webhook->enlaceVerificacionBsuid($bsuid);
+        $mensaje = $enlaceVerificacion
+            ? 'Para continuar usando la herramienta, verifica tu cuenta y acepta los documentos actualizados aquí: ' . $enlaceVerificacion
+            : 'Necesitamos verificar tu cuenta para continuar. Intenta nuevamente en unos momentos.';
+    } else {
+        $mensaje = 'Parece que tu número no está registrado. Busca tu institución aquí: https://wsp-multi.dcsing.com/view/instituciones/';
+    }
     $respuesta = $mdl_webhook->plantillaTexto($destino, $mensaje);
     $mdl_webhook->enviador($respuesta);
     $mdl_webhook->LogWebhook($identificador,'Mensaje de numero no registrado');

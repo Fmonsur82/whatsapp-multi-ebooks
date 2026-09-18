@@ -70,12 +70,15 @@ if (isset($_GET['token']) && !empty($_GET['token'])) {
 				<div class="col-lg-6 col-md-12 col-sm-12 text-center">
 
 					<div class="form-check">
-						<input class="form-check-input" type="checkbox" value="" id="defaultCheck1" required>
-						<label class="form-check-label" for="defaultCheck1">
-							Acepto 
-							<a href="../terminos-y-condiciones/" target="_blanc">términos y condiciones</a>, y
-							<a href="../terminos-y-condiciones/#tratamiento">tratamiento de datos</a>
-							de uso en la aplicación de WhatsApp.
+						<input class="form-check-input" type="checkbox" value="1" id="acepta_pol_priv" name="acepta_pol_priv" required>
+						<label class="form-check-label" for="acepta_pol_priv">
+							Acepto la <a href="https://digital-content.co/politica-de-datos/" target="_blank" rel="noopener">política de tratamiento de datos</a> (v3-202607).
+						</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" value="1" id="acepta_tyc" name="acepta_tyc" required>
+						<label class="form-check-label" for="acepta_tyc">
+							Acepto los <a href="https://wsp-multi.dcsing.com/view/terminos-y-condiciones/" target="_blank" rel="noopener">términos y condiciones</a> (v2-202609).
 						</label>
 					</div>
 

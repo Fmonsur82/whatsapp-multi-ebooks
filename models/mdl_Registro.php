@@ -15,9 +15,18 @@ class Registro{
         return ejecutarConsultaSimpleFila($sql);
     }
 
-    public function nuevoNumero($telefono, $id_cliente){
-        $sql = "INSERT INTO usuarios_multi_cliente(telefono,id_cliente)VALUES('$telefono','$id_cliente')";
-        return ejecutarConsulta($sql);
+    public function nuevoNumero($telefono, $id_cliente, $dispositivo, $ip){
+        $conexion = Conexion::getConexion();
+        $stmt = $conexion->prepare('INSERT INTO usuarios_multi_cliente (telefono, id_cliente, acepta_pol_priv, acepta_tyc, acepta_fecha_hora, acepta_dispositivo, acepta_ip, acepta_pol_priv_version, acepta_tyc_version) VALUES (?, ?, 1, 1, NOW(), ?, ?, ?, ?)');
+        if (!$stmt) {
+            return false;
+        }
+        $politicaVersion = 'v3-202607';
+        $tycVersion = 'v2-202609';
+        $stmt->bind_param('sissss', $telefono, $id_cliente, $dispositivo, $ip, $politicaVersion, $tycVersion);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
     }
 
     public function obtenerUsuario($telefono){

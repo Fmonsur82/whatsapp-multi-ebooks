@@ -339,20 +339,84 @@ class Webhook{
         return ejecutarConsulta($sql);
     }
 
-    public function validarUsuario($telefono) {
-        $cacheFile = __DIR__ . '/../cache/user_' . $telefono . '.json';
+    public function validarUsuario($telefono, $bsuid = null) {
+        $telefono = is_string($telefono) ? trim($telefono) : '';
+        $bsuid = is_string($bsuid) ? trim($bsuid) : '';
+        $cacheIdentificador = $telefono !== '' ? $telefono : $bsuid;
+        $cacheFile = __DIR__ . '/../cache/user_' . $cacheIdentificador . '.json';
         if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 86400) {
-            return json_decode(file_get_contents($cacheFile), true);
+            $data = json_decode(file_get_contents($cacheFile), true);
+            if ($data && $bsuid !== '') {
+                $this->asociarBsuid($data, $bsuid);
+            }
+            return $data;
         }
-        $sql = "SELECT umc.id AS id_usuario, umc.telefono, c.id_cliente, c.nombre AS nombre_cliente, c.url_acceso
-        FROM usuarios_multi_cliente umc
-        INNER JOIN cliente c ON c.id_cliente = umc.id_cliente
-        WHERE telefono = '$telefono'";
-        $data = ejecutarConsultaSimpleFila($sql);
+
+        $data = null;
+        $conexion = Conexion::getConexion();
+        if ($telefono !== '') {
+            $stmt = $conexion->prepare("SELECT umc.id AS id_usuario, umc.telefono, umc.bsuid, c.id_cliente, c.nombre AS nombre_cliente, c.url_acceso
+                FROM usuarios_multi_cliente umc
+                INNER JOIN cliente c ON c.id_cliente = umc.id_cliente
+                WHERE umc.telefono = ?
+                LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param('s', $telefono);
+                $stmt->execute();
+                $resultado = $stmt->get_result();
+                $data = $resultado ? $resultado->fetch_assoc() : null;
+                $stmt->close();
+            }
+        }
+
+        if (!$data && $bsuid !== '') {
+            $stmt = $conexion->prepare("SELECT umc.id AS id_usuario, umc.telefono, umc.bsuid, c.id_cliente, c.nombre AS nombre_cliente, c.url_acceso
+                FROM usuarios_multi_cliente umc
+                INNER JOIN cliente c ON c.id_cliente = umc.id_cliente
+                WHERE umc.bsuid = ?
+                LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param('s', $bsuid);
+                $stmt->execute();
+                $resultado = $stmt->get_result();
+                $data = $resultado ? $resultado->fetch_assoc() : null;
+                $stmt->close();
+            }
+        }
+
         if ($data) {
+            $this->asociarBsuid($data, $bsuid);
             file_put_contents($cacheFile, json_encode($data));
         }
         return $data;
+    }
+
+    private function asociarBsuid(array &$usuario, string $bsuid) {
+        if ($bsuid === '') {
+            return;
+        }
+
+        $bsuidActual = (string) ($usuario['bsuid'] ?? '');
+        if ($bsuidActual !== '' && $bsuidActual !== $bsuid) {
+            $this->LogWebhook($usuario['telefono'] ?? $bsuid, 'Conflicto de BSUID; no se sobrescribe el valor existente');
+            return;
+        }
+        if ($bsuidActual === $bsuid) {
+            return;
+        }
+
+        $conexion = Conexion::getConexion();
+        $stmt = $conexion->prepare('UPDATE usuarios_multi_cliente SET bsuid = ? WHERE id = ? AND (bsuid IS NULL OR bsuid = ? OR bsuid = \'\')');
+        if (!$stmt) {
+            return;
+        }
+        $idUsuario = (int) ($usuario['id_usuario'] ?? 0);
+        $vacio = '';
+        $stmt->bind_param('sis', $bsuid, $idUsuario, $vacio);
+        if ($stmt->execute() && $stmt->affected_rows === 1) {
+            $usuario['bsuid'] = $bsuid;
+        }
+        $stmt->close();
     }
 
     public function usrNoRegistrados($telefono,$fecha_hora){
@@ -364,6 +428,22 @@ class Webhook{
         $terminoEncode = rawurlencode($termino);
         $mensaje = '🔎 📚 Puedes encontrar todo lo relacionado a tu búsqueda en el siguente enlace: ';
         return $mensaje.$url_acceso.'?sos='.$terminoEncode;
+    }
+
+    public function enlaceVerificacionBsuid(string $bsuid): ?string {
+        if ($bsuid === '') {
+            return null;
+        }
+
+        require_once __DIR__ . '/mdl_VerificacionBsuid.php';
+        try {
+            $modelo = new VerificacionBsuid();
+            $token = $modelo->crearToken($bsuid);
+            return 'https://wsp-multi.dcsing.com/view/verificacion-bsuid/?token=' . rawurlencode($token);
+        } catch (Throwable $e) {
+            error_log('No fue posible crear enlace de verificación BSUID: ' . $e->getMessage());
+            return null;
+        }
     }
 
 }
